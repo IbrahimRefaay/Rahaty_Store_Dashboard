@@ -25,7 +25,7 @@ ODOO_PASSWORD = "Rs.Data.team"
 
 # --- إعدادات Google BigQuery ---
 # PROJECT_ID سيتم جلبه من متغيرات البيئة في GitHub Actions
-PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+PROJECT_ID = "spartan-cedar-467808-p9"
 DATASET_ID = "Orders"
 TABLE_ID = "pos_order_lines"
 STAGING_TABLE_ID = "pos_order_lines_staging"
