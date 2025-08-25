@@ -25,7 +25,7 @@ ODOO_PASSWORD = "Rs.Data.team"
 
 # --- إعدادات Google BigQuery ---
 # PROJECT_ID سيتم جلبه من متغيرات البيئة في GitHub Actions
-PROJECT_ID = "spartan-cedar-467808-p9"
+PROJECT_ID ="spartan-cedar-467808-p9"
 DATASET_ID = "Orders"
 TABLE_ID = "pos_order_lines"
 STAGING_TABLE_ID = "pos_order_lines_staging"
@@ -207,49 +207,21 @@ def get_odoo_data_to_dataframe(start_date_obj, end_date_obj):
 
 def upload_df_to_bigquery(df, project_id):
     """
-    Uploads data to staging, then rebuilds the final table from a query.
-    Note: This uses default credentials from the environment.
+    Uploads data directly to the final table by appending new rows.
     """
     if df.empty:
         logging.warning("DataFrame is empty. Skipping BigQuery upload.")
         return
         
-    logging.info(f"Uploading {len(df)} new rows to staging table: {STAGING_DESTINATION_TABLE}...")
+    logging.info(f"Appending {len(df)} new rows directly to the final table: {DESTINATION_TABLE}...")
     try:
-        df.to_gbq(destination_table=STAGING_DESTINATION_TABLE, project_id=project_id,
-                     if_exists='replace', progress_bar=True)
-        logging.info("✅ Data successfully uploaded to staging table.")
+        df.to_gbq(destination_table=DESTINATION_TABLE, project_id=project_id,
+                     if_exists='append', progress_bar=True)
+        logging.info("✅ Data successfully appended to the table.")
     except Exception as e:
-        logging.error(f"An error occurred while uploading to the staging table: {e}")
+        logging.error(f"An error occurred while uploading data: {e}")
         raise
 
-    logging.info(f"Rebuilding final table {DESTINATION_TABLE} from query...")
-    
-    rebuild_query = f"""
-        SELECT *
-        FROM `{project_id}.{DESTINATION_TABLE}`
-        WHERE line_id NOT IN (SELECT line_id FROM `{project_id}.{STAGING_DESTINATION_TABLE}`)
-        
-        UNION ALL
-        
-        SELECT *
-        FROM `{project_id}.{STAGING_DESTINATION_TABLE}`
-    """
-    
-    try:
-        client = bigquery.Client(project=project_id)
-        
-        job_config = bigquery.QueryJobConfig(
-            destination=f"{project_id}.{DESTINATION_TABLE}",
-            write_disposition="WRITE_TRUNCATE", 
-        )
-        
-        query_job = client.query(rebuild_query, job_config=job_config)
-        query_job.result()
-        logging.info(f"✅ Rebuild successful. Final table is now up-to-date.")
-    except Exception as e:
-        logging.error(f"An error occurred during the table rebuild operation: {e}")
-        raise
 
 # --- Main execution block ---
 if __name__ == "__main__":
